@@ -1,9 +1,10 @@
 import React, {Component} from 'react'
 import TxModal from '../tx-modal/tx-modal'
 import ProductModal from "../product-modal/product-modal"
-import {fetchProducts} from "../../services/products"
+import {fetchProducts} from "../../services/services"
 
 import './styles.css'
+import {fetchMasterValues} from "../../services/services";
 
 class ProductsList extends Component {
 
@@ -11,19 +12,43 @@ class ProductsList extends Component {
 		products: [],
 		saleModal: false,
 		entryModal: false,
-		productModal: false
+		productModal: false,
+		transactionTypes: [],
+		productTypes: []
 	}
 
 	componentDidMount() {
 		this._fetchProducts()
+		this._fetchProductMasterValues()
+		this._fetchTxMasterValues()
 	}
 
 	_fetchProducts = async () => {
 		const response = await fetchProducts()
 		console.log(response)
 		if (response.status === 200) {
-			const products = response.data
+			const products = response.data.answerList
 			this.setState({ products })
+		}
+	}
+
+	_fetchTxMasterValues = async () => {
+		const type = 'TRANSACTION_TYPE'
+		const response = await fetchMasterValues(type)
+		console.log(response)
+		if (response.status === 200) {
+			const transactionTypes = response.data.answerList
+			this.setState({ transactionTypes })
+		}
+	}
+
+	_fetchProductMasterValues = async () => {
+		const type = 'PRODUCT_BASE_TYPE'
+		const response = await fetchMasterValues(type)
+		console.log(response)
+		if (response.status === 200) {
+			const productTypes = response.data.answerList
+			this.setState({ productTypes })
 		}
 	}
 
@@ -37,12 +62,12 @@ class ProductsList extends Component {
 	}
 
 	render() {
-		const {products, saleModal, entryModal, productModal} = this.state
+		const {products, saleModal, entryModal, productModal, productTypes, transactionTypes} = this.state
 		return (
 			<div className="p-container">
-				{ productModal && <ProductModal isOpen={productModal} onClose={this._closeModal('productModal')}/>}
-				{ saleModal && <TxModal isOpen={saleModal} type='sale' onClose={this._closeModal('saleModal')} products={products}/>}
-				{ entryModal && <TxModal isOpen={entryModal} type='entry' onClose={this._closeModal('entryModal')} products={products}/>}
+				{ productModal && <ProductModal isOpen={productModal} onClose={this._closeModal('productModal')} types={productTypes}/>}
+				{ saleModal && <TxModal isOpen={saleModal} type='sale' onClose={this._closeModal('saleModal')} products={products}  types={transactionTypes}/>}
+				{ entryModal && <TxModal isOpen={entryModal} type='entry' onClose={this._closeModal('entryModal')} products={products} types={transactionTypes}/>}
 				<div className="actions">
 					<h4>Productos</h4>
 					<div className="buttons-bar">
@@ -57,7 +82,7 @@ class ProductsList extends Component {
 					<tr>
 						<th>ID</th>
 						<th>Nombre</th>
-						<th>Precio</th>
+						<th>Tipo</th>
 						<th>Stock</th>
 					</tr>
 					</thead>
@@ -66,8 +91,8 @@ class ProductsList extends Component {
 							<tr>
 								<td>{p.id}</td>
 								<td>{p.name}</td>
-								<td>{p.price}</td>
-								<td>{p.stock}</td>
+								<td>{p.basedTypeId.name}</td>
+								<td>{p.currentQuantityStock}</td>
 							</tr>
 						))}
 					</tbody>

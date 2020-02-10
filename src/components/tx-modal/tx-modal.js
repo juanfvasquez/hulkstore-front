@@ -2,47 +2,71 @@ import React, {Component} from 'react'
 import Modal from 'react-modal'
 
 import './styles.css'
-import {createSale} from "../../services/sales";
-import {createEntry} from "../../services/entries";
+import {createTransaction} from "../../services/services";
 
 Modal.setAppElement('#root')
 
 class TxModal extends Component {
 	state = {
-		product: null,
-		quantity: 1
+		product: '',
+		quantity: 1,
+		transactionTypeId: 0
+	}
+
+	componentDidMount() {
+		const typeMap = {
+			'sale': 'RETIRO',
+			'entry': 'INGRESO'
+		}
+		const {types, type} = this.props
+		const currentType = types.filter(t => t.name === typeMap[type])[0]
+		this.setState({ transactionTypeId: currentType.id })
 	}
 
 	handleChange = name => evt => {
 		this.setState({ [name]: evt.target.value })
 	}
 
-	_submit = () => {
-		const {product, quantity} = this.state
-		const {type} = this.props
+	_submit = async () => {
+		const {product, quantity, transactionTypeId} = this.state
+		const productObj = this.getProductById(product)
+		const {type, onClose} = this.props
 		if (!this.state.product) {
 			alert('Debe seleccionar un producto')
 			return
 		}
-		if (product.stock < quantity) {
+		if (productObj.currentQuantityStock < quantity) {
 			alert('No hay suficientes unidades')
 			return
 		}
-		if (type === 'sale') {
-			this._registerSale()
+		const data = {
+			modifiedQuantity: quantity,
+			createdUserId: 1,
+			transactionTypeId: {
+				id: transactionTypeId
+			},
+			productId: {
+				id: product,
+			}
+		}
+		console.log(data)
+		const response = await createTransaction(data)
+		if (response.status === 200) {
+			alert('Registrado correctamente')
+			onClose()
 		} else {
-			this._registerEntry()
+			console.log(response)
 		}
 	}
 
-	_registerSale = async () => {
-		const response = await createSale(this.state)
-		console.log(response)
-	}
-
-	_registerEntry = async () => {
-		const response = await createEntry(this.state)
-		console.log(response)
+	getProductById = (id) => {
+		const {products} = this.props
+		for (let i = 0; i < products.length; i++) {
+			if (Number(`${products[i].id}`) === Number(`${id}`)) {
+				return products[i]
+			}
+		}
+		return null
 	}
 
 	render() {
@@ -61,7 +85,7 @@ class TxModal extends Component {
 								<select id="selectProduct" className="form-control" value={product} onChange={this.handleChange('product')}>
 									<option value="">Seleccione producto</option>
 									{ products.map(p => (
-										<option value={p}>{p.name}</option>
+										<option value={p.id}>{p.name}</option>
 									))}
 								</select>
 							</div>
